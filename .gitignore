@@ -1,0 +1,114 @@
+# ignore file for git - generated from subversion with:
+# git svn show-ignore
+
+*.o
+*.exe
+
+# /
+/autom4te*.cache
+/clang
+/config.cache
+/config.h
+/config.log
+/config.status
+/makeinclude
+/*.bck
+/TAGS
+
+# /documentation/
+/documentation/.xvpics
+/documentation/blocks.0
+/documentation/blocks.6
+/documentation/blocks.z
+/documentation/checkers.0
+/documentation/checkers.6
+/documentation/checkers.z
+/documentation/fltk.0
+/documentation/fltk.3
+/documentation/fltk-config.0
+/documentation/fltk-config.1
+/documentation/fltk-config.z
+/documentation/fltk.d
+/documentation/fltk.pdf
+/documentation/fltk.z
+/documentation/fluid.0
+/documentation/fluid.1
+/documentation/fluid.z
+/documentation/html
+/documentation/latex
+/documentation/sudoku.0
+/documentation/sudoku.6
+/documentation/sudoku.z
+/documentation/*.bck
+/documentation/*.bak
+/documentation/*.log
+
+# /documentation/src/
+/documentation/src/*.0
+/documentation/src/*.1
+/documentation/src/*.3
+/documentation/src/*.6
+/documentation/src/*.z
+/documentation/src/fltk-book.tex
+
+# /examples/
+/examples/*.exe
+/examples/howto-add_fd-and-popen
+/examples/howto-parse-args
+/examples/howto-text-over-image-button
+/examples/menubar-add
+/examples/nativefilechooser-simple-app
+/examples/table-as-container
+/examples/table-simple
+/examples/table-sort
+/examples/table-spreadsheet
+/examples/table-spreadsheet-with-keyboard-nav
+/examples/tabs-simple
+/examples/textdisplay-with-colors
+/examples/texteditor-simple
+/examples/tree-simple
+/examples/wizard-simple
+
+# /fluid/
+/fluid/fluid
+/fluid/fluid-shared
+/fluid/*.bck
+/fluid/*.exe
+/fluid/*.ilk
+/fluid/TAGS
+
+# /fluid/fluid.app/Contents/MacOS/
+/fluid/fluid.app/Contents/MacOS/fluid
+
+# /fluid/pixmaps/
+/fluid/pixmaps/*.bck
+
+# /ide/Xcode3/
+/ide/Xcode3/build
+
+# /ide/Xcode3/FLTK.xcodeproj/
+/ide/Xcode3/FLTK.xcodeproj/*.pbxuser
+/ide/Xcode3/FLTK.xcodeproj/*.perspectivev3
+
+# /ide/Xcode4/
+/ide/Xcode4/build
+
+# /ide/Xcode4/FLTK.xcodeproj/
+/ide/Xcode4/FLTK.xcodeproj/*.pbxuser
+/ide/Xcode4/FLTK.xcodeproj/*.perspectivev3
+
+# /lib/
+/lib/lib*
+/lib/*.lib
+/lib/*.a
+
+# /misc/
+/misc/doxystar
+
+# /src/
+/src/*.so*
+/src/*.sl*
+/src/*.a
+/src/*.bck
+/src/*.sav
+/src/*.dylib
