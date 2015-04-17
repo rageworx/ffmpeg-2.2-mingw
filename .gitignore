@@ -1,10 +1,18 @@
 # ignore file for git - generated from subversion with:
 # git svn show-ignore
 
+*.1
+*.2
+*.3
+*.pod
+*.d
 *.o
+*.a
+*.texi
 *.exe
 
 # /
+/config.mak
 /autom4te*.cache
 /clang
 /config.cache
