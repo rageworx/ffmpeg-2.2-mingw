@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #test YASM
-YASM="vsyasm"
-YASM_TEST=`vsyasm --version`
+YASM="yasm-1.2.0-win32"
+YASM_TEST=`$YASM --version`
 
 if [ -z "$YASM_TEST" ]; then
 echo "YASM not found."
