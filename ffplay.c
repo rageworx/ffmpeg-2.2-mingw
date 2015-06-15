@@ -278,6 +278,8 @@ typedef struct VideoState {
     int last_video_stream, last_audio_stream, last_subtitle_stream;
 
     SDL_cond *continue_read_thread;
+	
+	int rtsp_firstskip;
 } VideoState;
 
 /* options specified by the user */
@@ -336,8 +338,12 @@ static AVPacket flush_pkt;
 
 #define FF_ALLOC_EVENT   (SDL_USEREVENT)
 #define FF_QUIT_EVENT    (SDL_USEREVENT + 2)
+#define FF_RTSP_EVENT	 (SDL_USEREVENT + 10)
 
 static SDL_Surface *screen;
+static SDL_TimerID rtsp_skip_timerid = 0;
+
+static uint32_t rtsp_timeer_cbfunc(Uint32 interval, void *param);
 
 static inline
 int cmp_audio_fmts(enum AVSampleFormat fmt1, int64_t channel_count1,
@@ -1990,6 +1996,13 @@ static int video_thread(void *arg)
         }
 #endif
 
+		if ( is->rtsp_firstskip > 0 )
+		{
+			is->rtsp_firstskip = 0;
+			uint32_t delay = 1000;			
+			rtsp_skip_timerid = SDL_AddTimer(delay, rtsp_timeer_cbfunc, (void*)is);
+		}
+
         if (ret < 0)
             goto the_end;
     }
@@ -2378,6 +2391,8 @@ static void sdl_audio_callback(void *opaque, Uint8 *stream, int len)
     VideoState *is = opaque;
     int audio_size, len1;
 
+	av_log(NULL,AV_LOG_INFO,"sdl_audio_callback len = %d ", len);
+	
     audio_callback_time = av_gettime();
 
     while (len > 0) {
@@ -2401,6 +2416,7 @@ static void sdl_audio_callback(void *opaque, Uint8 *stream, int len)
         len -= len1;
         stream += len1;
         is->audio_buf_index += len1;
+		av_log(NULL,AV_LOG_INFO,"Audio filled %d/%d bytes....\n", len1,len);
     }
     is->audio_write_buf_size = is->audio_buf_size - is->audio_buf_index;
     /* Let's assume the audio driver that is used by SDL has two periods. */
@@ -2466,6 +2482,16 @@ static int audio_open(void *opaque, int64_t wanted_channel_layout, int wanted_nb
     audio_hw_params->channels =  spec.channels;
     audio_hw_params->frame_size = av_samples_get_buffer_size(NULL, audio_hw_params->channels, 1, audio_hw_params->fmt, 1);
     audio_hw_params->bytes_per_sec = av_samples_get_buffer_size(NULL, audio_hw_params->channels, audio_hw_params->freq, audio_hw_params->fmt, 1);
+	
+    av_log(NULL,AV_LOG_INFO,"\n");
+	av_log(NULL,AV_LOG_INFO,"#DEBUG.AUDIO#\n");
+    av_log(NULL,AV_LOG_INFO,"\tformat = AV_SAMPLE_FMT_S16\n");
+    av_log(NULL,AV_LOG_INFO,"\tfrequency = %dHz\n", audio_hw_params->freq);
+    av_log(NULL,AV_LOG_INFO,"\tchannels = %d\n", audio_hw_params->channels);
+    av_log(NULL,AV_LOG_INFO,"\tframe size = %d\n",audio_hw_params->frame_size);
+    av_log(NULL,AV_LOG_INFO,"\tbytes/sec = %d\n",audio_hw_params->bytes_per_sec);
+    av_log(NULL,AV_LOG_INFO,"\n");
+	
     if (audio_hw_params->bytes_per_sec <= 0 || audio_hw_params->frame_size <= 0) {
         av_log(NULL, AV_LOG_ERROR, "av_samples_get_buffer_size failed\n");
         return -1;
@@ -2796,6 +2822,7 @@ static int read_thread(void *arg)
 
     for (i = 0; i < ic->nb_streams; i++)
         ic->streams[i]->discard = AVDISCARD_ALL;
+		
     if (!video_disable)
         st_index[AVMEDIA_TYPE_VIDEO] =
             av_find_best_stream(ic, AVMEDIA_TYPE_VIDEO,
@@ -2814,9 +2841,20 @@ static int read_thread(void *arg)
                                  st_index[AVMEDIA_TYPE_AUDIO] :
                                  st_index[AVMEDIA_TYPE_VIDEO]),
                                 NULL, 0);
+	/*
     if (show_status) {
         av_dump_format(ic, 0, is->filename, 0);
     }
+	*/
+    av_log(NULL, AV_LOG_INFO,"\n_Stream info debug#\n");
+    av_dump_format(ic, 0, is->filename, 0);
+    av_log(NULL, AV_LOG_INFO,"\n");
+    av_log(NULL, AV_LOG_INFO,"st_index ... \n");
+    av_log(NULL, AV_LOG_INFO,"\tVIDEO = %d\n", st_index[AVMEDIA_TYPE_VIDEO]);
+    av_log(NULL, AV_LOG_INFO,"\tAUDIO = %d\n", st_index[AVMEDIA_TYPE_AUDIO]);
+    av_log(NULL, AV_LOG_INFO,"\tDATA  = %d\n", st_index[AVMEDIA_TYPE_DATA]);
+    av_log(NULL, AV_LOG_INFO,"\tSUBTT = %d\n", st_index[AVMEDIA_TYPE_SUBTITLE]);
+    av_log(NULL, AV_LOG_INFO,"\n");	
 
     is->show_mode = show_mode;
     if (st_index[AVMEDIA_TYPE_VIDEO] >= 0) {
@@ -3019,6 +3057,16 @@ static VideoState *stream_open(const char *filename, AVInputFormat *iformat)
     is = av_mallocz(sizeof(VideoState));
     if (!is)
         return NULL;
+	
+	if ( strncmp("rtsp://",filename,5) == 0 )
+	{
+		is->rtsp_firstskip = 1;
+	}
+	else
+	{
+		is->rtsp_firstskip = 0;
+	}
+	
     av_strlcpy(is->filename, filename, sizeof(is->filename));
     is->iformat = iformat;
     is->ytop    = 0;
@@ -3355,7 +3403,7 @@ static void event_loop(VideoState *cur_stream)
                 screen_height = cur_stream->height = screen->h;
                 cur_stream->force_refresh = 1;
             break;
-        case SDL_QUIT:
+		case SDL_QUIT:
         case FF_QUIT_EVENT:
             do_exit(cur_stream);
             break;
@@ -3366,6 +3414,42 @@ static void event_loop(VideoState *cur_stream)
             break;
         }
     }
+}
+
+static uint32_t rtsp_timeer_cbfunc(Uint32 interval, void *param)
+{
+	SDL_RemoveTimer( rtsp_skip_timerid );
+	
+	VideoState* cur_stream = (VideoState*)param;
+	if ( cur_stream )
+	{
+		double incr, pos, frac;
+		
+		if (seek_by_bytes) {
+			if (cur_stream->video_stream >= 0 && cur_stream->video_current_pos >= 0) {
+				pos = cur_stream->video_current_pos;
+			} else if (cur_stream->audio_stream >= 0 && cur_stream->audio_pkt.pos >= 0) {
+				pos = cur_stream->audio_pkt.pos;
+			} else
+				pos = avio_tell(cur_stream->ic->pb);
+			if (cur_stream->ic->bit_rate)
+				incr *= cur_stream->ic->bit_rate / 8.0;
+			else
+				incr *= 180000.0;
+			pos += incr;
+			stream_seek(cur_stream, pos, incr, 1);
+		} else {
+			pos = get_master_clock(cur_stream);
+			if (isnan(pos))
+				pos = (double)cur_stream->seek_pos / AV_TIME_BASE;
+			pos += incr;
+			if (cur_stream->ic->start_time != AV_NOPTS_VALUE && pos < cur_stream->ic->start_time / (double)AV_TIME_BASE)
+				pos = cur_stream->ic->start_time / (double)AV_TIME_BASE;
+			stream_seek(cur_stream, (int64_t)(pos * AV_TIME_BASE), (int64_t)(incr * AV_TIME_BASE), 0);
+		}
+	}
+		
+    return(interval);
 }
 
 static int opt_frame_size(void *optctx, const char *opt, const char *arg)
@@ -3525,8 +3609,10 @@ static const OptionDef options[] = {
 
 static void show_usage(void)
 {
-    av_log(NULL, AV_LOG_INFO, "Simple media player\n");
-    av_log(NULL, AV_LOG_INFO, "usage: %s [options] input_file\n", program_name);
+    av_log(NULL, AV_LOG_INFO, "3IWare ffmpegmod player, console runtime [win32, minGW, pthread, SDL]\n");
+    av_log(NULL, AV_LOG_INFO, "Programmed by rage.kim@gmail.com / 3Iware\n");
+    av_log(NULL, AV_LOG_INFO, "\n");
+    av_log(NULL, AV_LOG_INFO, "\tusage: %s [options] input_file\n", program_name);
     av_log(NULL, AV_LOG_INFO, "\n");
 }
 
@@ -3605,7 +3691,7 @@ int main(int argc, char **argv)
     signal(SIGINT , sigterm_handler); /* Interrupt (ANSI).    */
     signal(SIGTERM, sigterm_handler); /* Termination (ANSI).  */
 
-    show_banner(argc, argv, options);
+    //show_banner(argc, argv, options);
 
     parse_options(NULL, argc, argv, options, opt_input_file);
 
@@ -3651,7 +3737,7 @@ int main(int argc, char **argv)
 
     av_init_packet(&flush_pkt);
     flush_pkt.data = (uint8_t *)&flush_pkt;
-
+	
     is = stream_open(input_filename, file_iformat);
     if (!is) {
         av_log(NULL, AV_LOG_FATAL, "Failed to initialize VideoState!\n");

@@ -28,6 +28,9 @@
  * @see specs available on the Matroska project page: http://www.matroska.org/
  */
 
+#ifdef _WIN32
+	#include <windows.h>
+#endif
 #include <stdio.h>
 #include "avformat.h"
 #include "internal.h"

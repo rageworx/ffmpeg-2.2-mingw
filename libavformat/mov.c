@@ -23,6 +23,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#ifdef _WIN32
+	#include <windows.h>
+#endif /// of _WIN32
 #include <limits.h>
 #include <stdint.h>
 

@@ -29,6 +29,9 @@
 #include "config.h"
 
 #if CONFIG_ZLIB
+#ifdef _WIN32
+	#include <windows.h>
+#endif /// of _WIN32
 #include <zlib.h>
 #endif
 

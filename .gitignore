@@ -10,6 +10,7 @@
 *.a
 *.texi
 *.exe
+*.bak
 
 # /
 /config.mak

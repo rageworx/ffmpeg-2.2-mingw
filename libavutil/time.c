@@ -20,14 +20,15 @@
 
 #include "config.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif /// of _WIN32
+
 #include <stddef.h>
 #include <stdint.h>
 #include <time.h>
 #if HAVE_GETTIMEOFDAY
 #include <sys/time.h>
-#endif
-#ifdef _WIN32
-#include <windows.h>
 #endif
 #if HAVE_UNISTD_H
 #include <unistd.h>

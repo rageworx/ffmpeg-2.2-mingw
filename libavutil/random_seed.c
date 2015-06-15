@@ -27,7 +27,6 @@
 #include <unistd.h>
 #endif
 #if HAVE_CRYPTGENRANDOM
-#include <windows.h>
 #include <wincrypt.h>
 #endif
 #include <fcntl.h>
